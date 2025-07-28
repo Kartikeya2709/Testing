@@ -2,7 +2,7 @@ name: Daily commit
 
 on:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 1 * * *'  # Runs daily at 01:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -31,4 +31,7 @@ jobs:
           fi
 
           git commit -m "chore: daily commit $(date -u '+%Y-%m-%d')"
-          git push
+
+          # Pull latest changes to avoid non-fast-forward push errors
+          git pull --rebase origin main
+          git push origin main
