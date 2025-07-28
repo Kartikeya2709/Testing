@@ -1,0 +1,44 @@
+name: Daily README Update
+
+on:
+  schedule:
+    - cron: '0 1 * * *'  # Every day at 01:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          fetch-depth: 0  # Full history required for pull/rebase
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Pull latest changes
+        run: |
+          git pull --rebase origin main || {
+            echo "❌ Rebase failed"
+            exit 1
+          }
+
+      - name: Update README with timestamp
+        run: |
+          echo "⏱️ Updated on $(date -u +"%Y-%m-%dT%H:%M:%SZ")" > README.md
+
+      - name: Commit & push if README changed
+        run: |
+          git add README.md
+          if git diff --cached --quiet; then
+            echo "✅ No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: update README $(date -u +'%Y-%m-%d')"
+          git push origin main
