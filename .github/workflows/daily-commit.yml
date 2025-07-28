@@ -2,7 +2,7 @@ name: Daily commit
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # Runs daily at 01:00 UTC
+    - cron: '0 1 * * *'  # Every day at 01:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -10,12 +10,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
-          fetch-depth: 0  # Important for pull/rebase to work
+          fetch-depth: 0  # Full git history needed for rebase
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Pull latest changes
+        run: |
+          set -x
+          git pull --rebase origin main || {
+            echo "⚠️ Rebase failed. Exiting to prevent broken state."
+            exit 1
+          }
 
       - name: Update timestamp file
         run: |
@@ -23,22 +36,13 @@ jobs:
 
       - name: Commit & push if changed
         run: |
-          git config --global user.name  "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
+          set -x
           git add last_commit.txt
 
           if git diff --cached --quiet; then
-            echo "No changes to commit"
+            echo "✅ No changes to commit"
             exit 0
           fi
 
           git commit -m "chore: daily commit $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-
-          echo "Pulling latest changes before pushing..."
-          git pull --rebase origin main || {
-            echo "Rebase failed. Exiting to avoid broken state."
-            exit 1
-          }
-
           git push origin main
