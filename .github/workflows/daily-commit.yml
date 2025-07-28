@@ -2,7 +2,7 @@ name: Daily commit
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # Every day at 01:00 UTC
+    - cron: '0 1 * * *'  # Daily at 01:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -15,34 +15,31 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
-          fetch-depth: 0  # Full git history needed for rebase
+          fetch-depth: 0  # ⚠️ Needed for rebase to work!
 
-      - name: Configure Git
+      - name: Setup Git identity
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Pull latest changes
+      - name: Pull latest main branch
         run: |
-          set -x
           git pull --rebase origin main || {
-            echo "⚠️ Rebase failed. Exiting to prevent broken state."
+            echo "❌ Git pull failed"
             exit 1
           }
 
       - name: Update timestamp file
         run: |
-          echo "Last automatic commit: $(date -u +"%Y-%m-%dT%H:%M:%SZ")" > last_commit.txt
+          echo "Last automatic commit: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > last_commit.txt
 
-      - name: Commit & push if changed
+      - name: Commit and push if changed
         run: |
-          set -x
           git add last_commit.txt
-
           if git diff --cached --quiet; then
             echo "✅ No changes to commit"
             exit 0
           fi
 
-          git commit -m "chore: daily commit $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          git commit -m "chore: daily commit $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           git push origin main
