@@ -1,8 +1,11 @@
+permissions:
+  contents: write
+
 name: Daily commit
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # Daily at 01:00 UTC
+    - cron: '0 1 * * *'
   workflow_dispatch:
 
 jobs:
@@ -10,36 +13,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
-          fetch-depth: 0  # ⚠️ Needed for rebase to work!
+      - uses: actions/checkout@v4
 
       - name: Setup Git identity
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "Kartikeya Sharma"
+          git config --global user.email "kartikrb1.0@gmail.com"
 
-      - name: Pull latest main branch
-        run: |
-          git pull --rebase origin main || {
-            echo "❌ Git pull failed"
-            exit 1
-          }
-
-      - name: Update timestamp file
+      - name: Update timestamp
         run: |
           echo "Last automatic commit: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" > last_commit.txt
 
-      - name: Commit and push if changed
+      - name: Commit and push
         run: |
           git add last_commit.txt
-          if git diff --cached --quiet; then
-            echo "✅ No changes to commit"
-            exit 0
-          fi
-
-          git commit -m "chore: daily commit $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          git push origin main
+          git commit -m "Daily commit $(date -u +'%Y-%m-%dT%H:%M:%SZ')" || exit 0
+          git push
