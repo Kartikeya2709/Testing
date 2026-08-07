@@ -1,0 +1,114 @@
+name: Random Contributions
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    # Runs 7 times every day (UTC)
+    - cron: "15 2,5,8,11,14,17,20 * * *"
+  workflow_dispatch:
+
+jobs:
+  contribute:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "Kartikeya Sharma"
+          git config --global user.email "kartikrb1.0@gmail.com"
+
+      - name: Generate Random Activity
+        shell: bash
+        run: |
+          mkdir -p .github/data
+
+          FILE=".github/data/activity.txt"
+          touch "$FILE"
+
+          TODAY=$(date -u +%F)
+          DAY=$(date -u +%u)   # 1=Mon ... 7=Sun
+
+          LINE=$(grep "^$TODAY " "$FILE" || true)
+
+          if [ -z "$LINE" ]; then
+
+            RANDOM_NUMBER=$((RANDOM % 100))
+
+            if [ "$DAY" -ge 6 ]; then
+              # Weekend (0-3 commits)
+              if [ "$RANDOM_NUMBER" -lt 50 ]; then
+                TARGET=0
+              elif [ "$RANDOM_NUMBER" -lt 80 ]; then
+                TARGET=1
+              elif [ "$RANDOM_NUMBER" -lt 95 ]; then
+                TARGET=2
+              else
+                TARGET=3
+              fi
+            else
+              # Weekday (minimum 1 commit)
+              if [ "$RANDOM_NUMBER" -lt 45 ]; then
+                TARGET=1
+              elif [ "$RANDOM_NUMBER" -lt 75 ]; then
+                TARGET=2
+              elif [ "$RANDOM_NUMBER" -lt 95 ]; then
+                TARGET=3
+              else
+                TARGET=4
+              fi
+            fi
+
+            COUNT=0
+            echo "$TODAY $COUNT $TARGET" >> "$FILE"
+
+          else
+
+            COUNT=$(echo "$LINE" | awk '{print $2}')
+            TARGET=$(echo "$LINE" | awk '{print $3}')
+
+          fi
+
+          echo "Today's Target: $TARGET"
+          echo "Current Count: $COUNT"
+
+          if [ "$COUNT" -ge "$TARGET" ]; then
+            echo "Target already reached for today."
+            exit 0
+          fi
+
+          echo "Commit at $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> last_commit.txt
+
+          NEWCOUNT=$((COUNT + 1))
+          sed -i "s/^$TODAY .*/$TODAY $NEWCOUNT $TARGET/" "$FILE"
+
+      - name: Commit Changes
+        run: |
+          git add last_commit.txt .github/data/activity.txt
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          messages=(
+            "docs: update notes"
+            "chore: maintenance"
+            "refactor: cleanup"
+            "style: formatting"
+            "fix: small update"
+            "docs: refresh"
+            "chore: sync files"
+            "build: update"
+          )
+
+          INDEX=$((RANDOM % ${#messages[@]}))
+
+          git commit -m "${messages[$INDEX]}"
+          git push
